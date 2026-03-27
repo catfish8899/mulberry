@@ -1,6 +1,6 @@
 /**
  * 初始的节点和连线数据，用于构建最小可行性概念图。
- * 使用基于引用的坐标系进行排布，重现概念图中的拓扑结构。
+ * 节点的拓扑结构将定义 agent 执行引擎的数据流走向。
  */
 
 // --- 节点数据 (Nodes) ---
@@ -73,11 +73,17 @@ export const initialNodes = [
 
 // --- 连线数据 (Edges) ---
 export const initialEdges = [
+  // 左侧设定层配置连线 (角色配置与绑定)
   { id: "e_prompt_to_alice", source: "node_prompt_alice", target: "node_role_alice", animated: true, type: "editableEdge", data: { label: "写入提示词" } },
   { id: "e_user_to_current", source: "node_role_user", target: "node_content_current", animated: true, type: "editableEdge", data: { label: "处理此对话" } },
   { id: "e_alice_to_plan", source: "node_role_alice", target: "node_content_plan", animated: true, type: "editableEdge", data: { label: "处理此对话" } },
-  { id: "e_current_to_plan", source: "node_content_current", target: "node_content_plan", animated: true, type: "editableEdge", data: { label: "连接上下文" } },
+  
+  // 右侧核心执行层管线 
   { id: "e_debugStart_to_current", source: "node_debug_start", target: "node_content_current", animated: true, type: "editableEdge", data: { label: "此处视为开始" } },
-  { id: "e_btnStart_to_current", source: "node_btn_start", target: "node_content_current", animated: true, type: "editableEdge", data: { label: "开始聊天" } },
+  { id: "e_current_to_plan", source: "node_content_current", target: "node_content_plan", animated: true, type: "editableEdge", data: { label: "连接上下文" } },
+  
+  // 【本次修正逻辑】：将动作流引导修正为从 "内容块(当前)" 输出流向 "开始聊天按钮" 入口
+  { id: "e_current_to_btnStart", source: "node_content_current", target: "node_btn_start", animated: true, type: "editableEdge", data: { label: "开始聊天" } },
+  
   { id: "e_plan_to_debugEnd", source: "node_content_plan", target: "node_debug_end", animated: true, type: "editableEdge", data: { label: "此处视为结束" } },
 ];
