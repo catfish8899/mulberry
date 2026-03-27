@@ -1,0 +1,15 @@
+/* src/index.css */
+
+/* 导入 Tailwind CSS 的全部核心指令及其默认样式规则（基于 v4 标准） */
+@import "tailwindcss";
+
+/* 针对 React Flow 的基础重置（修复部分罕见浏览器下的滚动条异常） */
+html,
+body,
+#root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* 防止因为拖拽导致浏览器外部滚动 */
+}

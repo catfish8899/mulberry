@@ -1,0 +1,127 @@
+# ====================================================================
+# Mulberry 微框架 - 单体仓库全局 .gitignore 配置文件
+# 适用环境: Windows 11 / Mac / Linux
+# 包含栈: Node.js (Vite + React UI) / Python 3.12 (FastAPI 后端)
+# ====================================================================
+
+# --------------------------------------------------------------------
+# 1. 操作系统与通用文件层
+# --------------------------------------------------------------------
+# Windows 系统生成的缩略图缓存及目录配置文件
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.cab
+Desktop.ini
+
+# macOS 系统生成的自定义文件夹属性
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# --------------------------------------------------------------------
+# 2. 常见 IDE 与编辑器配置层
+# --------------------------------------------------------------------
+# VS Code 局部工作区配置（若需团队共享 Launch 配置，可注释此部分）
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains 系列 IDE (PyCharm, WebStorm 等)
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# --------------------------------------------------------------------
+# 3. Node.js & Vite 前端层 (mulberry-frontend)
+# --------------------------------------------------------------------
+# 依赖包目录 (必须被忽略，由 package.json 和 lock 文件管理)
+node_modules/
+jspm_packages/
+
+# Vite 或构建工具生成的生产环境产物
+dist/
+dist-ssr/
+build/
+*.local
+
+# npm/pnpm/yarn 等包管理器生成的错误日志或调试文件
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 前端本地环境变量（包含敏感 API keys，绝对不能提交至代码库）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vite 缓存
+node_modules/.vite/
+.eslintcache
+
+# --------------------------------------------------------------------
+# 4. Python & FastAPI 后端层 (mulberry-backend)
+# --------------------------------------------------------------------
+# 字节码与缓存文件 (Python 运行时的动态编译产物)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python 虚拟环境目录 (由于采用 venv 形式安装依赖，该目录极大且仅作本地运行缓存)
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# 甚至在某些极端情况下用户全局安装可能引入的缓存
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# 后端本地环境变量
+*.env
+
+# Python 包分发与构建临时文件
+build/
+develop-eggs/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 单元测试与覆盖率报告产物
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.smd
+
+# --------------------------------------------------------------------
+# 5. 微框架运行时与杂项 (Mulberry Runtime)
+# --------------------------------------------------------------------
+# 本地 SQLite 数据库文件 (如果是作为鸭子类型后端的单机存储方案，不应上传)
+*.db
+*.sqlite
+*.sqlite3
+
+# 框架运行过程中可能产生的临时日志文件或大模型输出流截图/缓存
+logs/
+*.log
+
+# --------------------------------------------------------------------
+# 开发者自定义忽略区 (请在此处下方添加您个人的临时忽略文件)
+# --------------------------------------------------------------------
