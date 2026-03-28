@@ -1,22 +1,77 @@
 /**
- * 业务引擎层：封装所有与后端微服务通信的逻辑（撤销/重做栈、SSE 推流器）
+ * 业务引擎层：封装所有与后端微服务通信的逻辑（撤销/重做栈、SSE 推流器、物理落盘挂载）
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 const API_BASE = "http://127.0.0.1:8000/api";
+
+// ====== 独立服务层提取（供非画布相关的系统级 UI 组件及主线程调用） ======
+
+export const fetchPersistentConfig = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/settings/config`);
+    const data = await response.json();
+    return data.path || "";
+  } catch (err) {
+    console.warn("读取本地持久化角色配置失败, 将回落空态", err);
+    return "";
+  }
+};
+
+export const pushPersistentConfig = async (pathString) => {
+  try {
+    await fetch(`${API_BASE}/settings/config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: pathString.trim() })
+    });
+  } catch (err) {
+    console.warn("持久化角色配置落盘挂起失败", err);
+  }
+};
+
+/**
+ * 【新增】[拉取动作] 从后端 JSON 按规拉取历史被保存的画布数据 (Nodes, Edges)
+ */
+export const fetchCanvasData = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/canvas/data`);
+    return await response.json();
+  } catch (err) {
+    console.warn("拉取前端持久化画布数据失败", err);
+    return null;
+  }
+};
+
+/**
+ * 【新增】[推送动作] 将当前的 Nodes 和 Edges 强制物理投递到后端，覆写指定的硬盘 .json 文件
+ */
+export const pushCanvasData = async (nodes, edges) => {
+  try {
+    await fetch(`${API_BASE}/canvas/data`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nodes, edges })
+    });
+  } catch (err) {
+    console.warn("持久化画布保存请求失败", err);
+    throw err;
+  }
+};
+
+
+// ====== 以下为原架构包含的画布状态机与流式核心引擎 ======
 
 export const useFlowEngine = ({ getNodes, getEdges, setNodes, setEdges, globalSettingsPath }) => {
   const [historyStatus, setHistoryStatus] = useState({ undo_count: 0, redo_count: 0 });
   const isUndoRedoActionRef = useRef(false);
   const historyStatusRef = useRef(historyStatus);
 
-  // 用于防并发截断的流式引擎指针
   const isStreamingRef = useRef(false);
   const currentActiveStreamNodeId = useRef(null);
 
   useEffect(() => { historyStatusRef.current = historyStatus; }, [historyStatus]);
 
-  // --- 历史栈推送接口 ---
   const resetStateInBackend = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/history/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nodes: getNodes(), edges: getEdges() }) });
@@ -58,7 +113,6 @@ export const useFlowEngine = ({ getNodes, getEdges, setNodes, setEdges, globalSe
     setTimeout(() => { isUndoRedoActionRef.current = false; }, 100);
   }, [setNodes, setEdges]);
 
-  // ===================== 核心任务：SSE 流式管线接管 =====================
   const runChatStream = async (buttonNodeId) => {
     if (isStreamingRef.current) return;
     isStreamingRef.current = true;

@@ -8,7 +8,7 @@ import json
 import httpx
 import logging
 
-# 去除部分第三方库的啰嗦日志
+# 去除部分第三方库的啰嗦日志，保持终端洁净
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Mulberry Micro-framework API")
@@ -21,7 +21,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ====== 历史记录栈 (保持不变) ======
+# ====== 系统路径物理常量定义 ======
+# 获取当前 main.py 所在的绝对硬盘目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 1. 角色配置文件地址存储库
+CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.json")
+# 2. 【新增】画布独立拓扑图数据存储库
+CANVAS_DATA_FILE_PATH = os.path.join(BASE_DIR, "canvas_data.json")
+
+# ====== 历史记录栈 (撤销/重做状态机) ======
 history_stack: List[Dict[str, Any]] = []
 current_index: int = -1
 
@@ -57,7 +65,53 @@ async def redo_state():
     return {"state": history_stack[current_index] if history_stack else None, "status": get_current_status()}
 
 
-# ====== 设置与校验 (保持不变) ======
+# ====== 新增：图拓扑数据 (画布) 持久化读写接口 ======
+@app.get("/api/canvas/data")
+async def get_canvas_data():
+    """只读接口：供前端在刷新或冷启动时调取上一次被主动保存的画布内容"""
+    if os.path.exists(CANVAS_DATA_FILE_PATH):
+        try:
+            with open(CANVAS_DATA_FILE_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logging.warning(f"读取画布拓扑存量数据异常: {e}")
+    # 如无文件，则返回规范的空列表约定
+    return {"nodes": [], "edges": []}
+
+@app.post("/api/canvas/data")
+async def save_canvas_data(payload: Dict[str, Any]):
+    """覆盖写入接口：接收前端手动的保存指令并物理落盘至独立的 .json 文件"""
+    try:
+        with open(CANVAS_DATA_FILE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        return {"status": "success"}
+    except Exception as e:
+        logging.error(f"图拓扑持久化硬盘写入失败: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# ====== 设置与校验 (Excel 路径配置) ======
+@app.get("/api/settings/config")
+async def get_config():
+    if os.path.exists(CONFIG_FILE_PATH):
+        try:
+            with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return {"path": data.get("excel_path", "")}
+        except Exception as e:
+            logging.warning(f"读取配置异常: {e}")
+    return {"path": ""}
+
+@app.post("/api/settings/config")
+async def save_config(payload: Dict[str, Any]):
+    path = payload.get("path", "").strip()
+    try:
+        with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as f:
+            json.dump({"excel_path": path}, f, ensure_ascii=False, indent=4)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.post("/api/settings/verify_excel")
 async def verify_excel(payload: Dict[str, Any]):
     path = payload.get("path", "").strip()
@@ -75,24 +129,30 @@ async def verify_excel(payload: Dict[str, Any]):
     except Exception:
         return {"status": "invalid"}
 
-# ===================== 新增：流式运行时执行图引擎 =====================
+# ===================== 流式运行时执行图引擎 =====================
 
 def find_node(nodes, node_id):
-    """辅助算法：根据 ID 在游离拓扑字典中抓取节点"""
     return next((n for n in nodes if n['id'] == node_id), None)
 
 async def _chat_generator(payload: Dict[str, Any]):
-    """
-    这是一个遵循 Server-Sent Events (SSE) 协议的异步生成器。
-    它不仅负责调用 LLM 流，还在事件元数据中下发指令指导前端更改节点状态。
-    """
     try:
         nodes = payload.get("nodes", [])
         edges = payload.get("edges", [])
         btn_id = payload.get("button_id")
         settings_path = payload.get("settings_path")
 
-        # 1. 溯源起点：找到连向该“开始聊天按钮”的内容块
+        # 容灾机制：若前端内存无数据，优先尝试退回硬盘读取最近固化地址
+        if not settings_path or not os.path.exists(settings_path):
+            if os.path.exists(CONFIG_FILE_PATH):
+                try:
+                    with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
+                        saved_config = json.load(f)
+                        fallback_path = saved_config.get("excel_path", "")
+                        if fallback_path and os.path.exists(fallback_path):
+                            settings_path = fallback_path
+                except Exception:
+                    pass
+
         btn_in_edge = next((e for e in edges if e.get('target') == btn_id), None)
         if not btn_in_edge: raise ValueError("按钮缺失上游连线")
         
@@ -100,36 +160,27 @@ async def _chat_generator(payload: Dict[str, Any]):
         if current_content_node.get('data', {}).get('status') != '当前':
             raise ValueError("防呆拦截：当前上下文焦点状态并非处于『当前』")
 
-        # 2. 预测未来：寻找当前流即将到达的下一个“计划”内容块
-        # 往往通过“连接上下文”连线连接
         plan_edge = next((e for e in edges if e.get('source') == current_content_node['id'] and 'connect' not in e.get('type','')), None)
-        # 用鸭子类型模糊寻找
         plan_edge = next((e for e in edges if e['source'] == current_content_node['id'] and find_node(nodes, e['target'])['type'] == 'contentNode'), None)
         if not plan_edge: raise ValueError("图有断层，找不到后续的计划接替节点")
         next_content_node = find_node(nodes, plan_edge['target'])
 
-        # 3. 确定角色分布图纸：
-        # 寻找目前内容块背后的发言人：
         curr_role_edge = next((e for e in edges if e['target'] == current_content_node['id'] and find_node(nodes, e['source'])['type'] == 'roleNode'), None)
         curr_role_name = find_node(nodes, curr_role_edge['source'])['data']['content'].strip()
 
-        # 寻找接替发言的 Agent 角色：
         next_role_edge = next((e for e in edges if e['target'] == next_content_node['id'] and find_node(nodes, e['source'])['type'] == 'roleNode'), None)
         agent_role_node = find_node(nodes, next_role_edge['source'])
         agent_name = agent_role_node['data']['content'].strip()
 
-        # 寻找系统提示词：
         sys_prompt_edge = next((e for e in edges if e['target'] == agent_role_node['id'] and find_node(nodes, e['source'])['type'] == 'rolePromptNode'), None)
         sys_prompt = find_node(nodes, sys_prompt_edge['source'])['data']['content'] if sys_prompt_edge else ""
 
-        # 第一步通知大捷：向前端发送 Meta 事件，指挥前端立刻将“老内容块”标为历史，将“新内容块”标为当前
         meta_event = {
             "old_current_id": current_content_node['id'],
             "new_current_id": next_content_node['id']
         }
         yield f"event: meta\ndata: {json.dumps(meta_event)}\n\n"
 
-        # 4. 解析 Excel 配置并尝试加载大语言模型环境变量
         api_key, model_name, provider = None, None, None
         model_found_flag = False
         
@@ -138,23 +189,19 @@ async def _chat_generator(payload: Dict[str, Any]):
             wb = openpyxl.load_workbook(settings_path, read_only=True, data_only=True)
             sheet = wb.active
             for row in sheet.iter_rows(min_row=2, values_only=True):
-                # 如果第一列角色名吻合（忽略“用户”）
                 if str(row[0]).strip() == agent_name and agent_name != "用户":
                     provider = str(row[1]).strip()
                     model_name = str(row[2]).strip()
-                    env_name = str(row[4]).strip() # OS环境存储的变量名
+                    env_name = str(row[4]).strip()
                     api_key = os.getenv(env_name)
                     if api_key: model_found_flag = True
                     break
 
-        # 5. 上下文组装
         user_input_text = current_content_node['data']['content']
         messages = []
         if sys_prompt: messages.append({"role": "system", "content": sys_prompt})
         messages.append({"role": "user", "content": f"{curr_role_name}：{user_input_text}"})
 
-        # 6. 利用 httpx 发起模型流式请求
-        # 微框架为了保障没有真实 API 也能容错展示流特性，特设了一道本地 Mock 机制兜底
         if model_found_flag and provider.lower() in ['deepseek', 'openai']:
             base_url = "https://api.deepseek.com/chat/completions" if provider.lower() == 'deepseek' else "https://api.openai.com/v1/chat/completions"
             async with httpx.AsyncClient() as client:
@@ -170,26 +217,21 @@ async def _chat_generator(payload: Dict[str, Any]):
                                 data_dict = json.loads(chunk[6:])
                                 delta = data_dict["choices"][0]["delta"].get("content", "")
                                 if delta:
-                                    # 推送每一个字符（Tokens）
                                     yield f"event: text\ndata: {json.dumps({'text': delta})}\n\n"
                             except Exception: pass
         else:
-            # 【本地退化演示流】如果环境变量未找到，生成一段框架提示说明以演示打字机效果
             fallback_text = f"你好，这里是本地演练流。我是角色『{agent_name}』。\n您的表格配置 { '成功命中角色' if provider else '没有命中相关角色' }，但由于系统未找到此 API 请求密钥变量，已退回本地演示模式。\n\n看到了吗？这也是流式输出的一环！顺便，你的话“{user_input_text.strip()[:10]}...”收到了。"
             import asyncio
             for char in fallback_text:
                 yield f"event: text\ndata: {json.dumps({'text': char})}\n\n"
                 await asyncio.sleep(0.05)
 
-        # 第三步指令：发送最终闭合事件，要求前端将当前 Agent 块褪为“历史”
         yield "event: done\ndata: {}\n\n"
 
     except Exception as e:
-        # 如果图结构连错，抛出红色错误提示进入流端
         yield f"event: error\ndata: {json.dumps({'msg': str(e)})}\n\n"
 
 @app.post("/api/chat/run")
 async def run_chat(request: Request):
     payload = await request.json()
-    # 采用标准 SSE 媒体类型下发流式数据
     return StreamingResponse(_chat_generator(payload), media_type="text/event-stream")

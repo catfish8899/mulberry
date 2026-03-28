@@ -2,8 +2,8 @@
  * 视图组件层：控制所有不直接涉及图拓扑状态的悬浮独立 UI
  */
 import React, { useState, useEffect } from 'react';
+import { fetchPersistentConfig, pushPersistentConfig } from '../hooks/useFlowEngine';
 
-// 复用常量以解耦
 const API_BASE = "http://127.0.0.1:8000/api";
 
 // ====== 桌面应用顶栏组件组合 (时钟 + 设置按钮) ======
@@ -41,21 +41,52 @@ export const SettingsModal = ({ isOpen, onClose, globalSettingsPath, setGlobalSe
   const [path, setPath] = useState(globalSettingsPath);
   const [status, setStatus] = useState("empty"); 
 
-  const handleBlur = async () => {
-    setGlobalSettingsPath(path);
-    if (!path.trim()) { setStatus("empty"); return; }
+  const verifyAndSavePath = async (currentPath, shouldPush = true) => {
+    if (!currentPath.trim()) { 
+      setStatus("empty"); 
+      if (shouldPush) await pushPersistentConfig(""); 
+      return; 
+    }
+    
     try {
       const res = await fetch(`${API_BASE}/settings/verify_excel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: path.trim() })
+        body: JSON.stringify({ path: currentPath.trim() })
       });
       const data = await res.json();
-      setStatus(data.status); 
+      setStatus(data.status);
+
+      if (data.status === "valid" && shouldPush) {
+        await pushPersistentConfig(currentPath);
+      }
     } catch (e) {
       console.error("验证请求失败:", e);
       setStatus("invalid");
     }
+  };
+
+  useEffect(() => {
+    const initializeConfig = async () => {
+      let targetPath = globalSettingsPath;
+      if (!globalSettingsPath) {
+        const persistentPath = await fetchPersistentConfig();
+        if (persistentPath) {
+          targetPath = persistentPath;
+          setPath(persistentPath);
+          setGlobalSettingsPath(persistentPath);
+        }
+      }
+      if (targetPath) {
+        verifyAndSavePath(targetPath, false); 
+      }
+    };
+    initializeConfig();
+  }, []); 
+
+  const handleBlur = () => {
+    setGlobalSettingsPath(path);
+    verifyAndSavePath(path, true); 
   };
 
   if (!isOpen) return null;
@@ -86,31 +117,55 @@ export const SettingsModal = ({ isOpen, onClose, globalSettingsPath, setGlobalSe
           placeholder="例如: C:\Users\raven\Desktop\角色配置.xlsx" spellCheck={false}
           className={`w-full outline-none border-2 rounded-lg px-4 py-2 text-gray-700 transition-colors duration-300 ${inputBorderColor}`}
         />
-        <p className="text-xs text-gray-400 mt-2">输入文件路径后点击此白板任意空白处（停止编辑），系统将立即底层校验合法性。</p>
+        <p className="text-xs text-gray-400 mt-2">系统底层已搭载智能热固化功能，输入合规且失焦验证转绿后，该记录会主动落盘锁档，防冷启刷新丢失。</p>
       </div>
     </div>
   );
 };
 
-// ====== 撤销/重做 控制面板组件 ======
-export const UndoRedoPanel = ({ historyStatus, onUndo, onRedo }) => {
+// ====== 控制面板组件：接通【保存与重置】功能 ======
+// 新增了纵向栅格 Flex-col 控制样式，分为顶部历史干涉区与底部工程维序区
+export const UndoRedoPanel = ({ historyStatus, onUndo, onRedo, onSaveClick, onResetClick }) => {
   const canUndo = historyStatus && historyStatus.undo_count > 0;
   const canRedo = historyStatus && historyStatus.redo_count > 0;
 
   return (
-    <div className="absolute top-16 right-4 z-50 flex gap-2 font-bold text-sm tracking-wide select-none">
-      <button 
-        onClick={canUndo ? onUndo : undefined}
-        className={`px-3 py-1.5 rounded-md shadow-sm border transition-colors ${canUndo ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200 active:scale-95 cursor-pointer' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-      >
-        undo {canUndo ? historyStatus.undo_count : ""}
-      </button>
-      <button 
-        onClick={canRedo ? onRedo : undefined}
-        className={`px-3 py-1.5 rounded-md shadow-sm border transition-colors ${canRedo ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200 active:scale-95 cursor-pointer' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-      >
-        redo {canRedo ? historyStatus.redo_count : ""}
-      </button>
+    <div className="absolute top-16 right-4 z-50 flex flex-col gap-3 font-bold text-sm tracking-wide select-none">
+      
+      {/* 履历操作栈 */}
+      <div className="flex gap-2 justify-end">
+        <button 
+          onClick={canUndo ? onUndo : undefined}
+          className={`px-3 py-1.5 rounded-md shadow-sm border transition-colors ${canUndo ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200 active:scale-95 cursor-pointer' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+        >
+          undo {canUndo ? historyStatus.undo_count : ""}
+        </button>
+        <button 
+          onClick={canRedo ? onRedo : undefined}
+          className={`px-3 py-1.5 rounded-md shadow-sm border transition-colors ${canRedo ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200 active:scale-95 cursor-pointer' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+        >
+          redo {canRedo ? historyStatus.redo_count : ""}
+        </button>
+      </div>
+
+      {/* 画布工程全局干涉栈 */}
+      <div className="flex gap-2 justify-end">
+         <button 
+          onClick={onSaveClick}
+          className="px-3 py-1.5 rounded-md shadow-sm border bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200 active:scale-95 cursor-pointer transition-colors"
+          title="将当前拓扑覆盖写入至硬盘的 json 中"
+        >
+          保存
+        </button>
+        <button 
+          onClick={onResetClick}
+          className="px-3 py-1.5 rounded-md shadow-sm border bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200 active:scale-95 cursor-pointer transition-colors"
+          title="退回系统出厂节点阵列（但不会主动抹除硬盘之前的保存）"
+        >
+          重置
+        </button>
+      </div>
+
     </div>
   );
 };
