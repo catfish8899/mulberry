@@ -1,0 +1,117 @@
+====================================================================
+Mulberry (桑葚) 代理微框架 - 核心开发者说明书与架构指南
+一、 项目基本情况概述
+Mulberry 是一个基于“有向无环图 (DAG)”原则构建的、面向多 Agent 协同与上下文管理的轻量级可视化执行微框架。
+
+本项目的核心思想是“拓扑即逻辑”：通过前端画布上的节点连线，动态定义大语言模型 (LLM) 的身份、记忆上下文以及执行流向。项目遵循极简MVP原则，摒弃了繁重的 ORM 型数据库和过度封装的第三方 LLM 链式库（如 LangChain），从而赋予开发者绝对的底层控制权。
+
+【技术栈组成】
+
+运行环境：Windows 11 / Node.js / Python 3.12
+前端体系：Vite + React (纯 JavaScript) + @xyflow/react (图编译核心) + Tailwind CSS (UI 样式)
+后端体系：FastAPI + httpx (高并发外网请求) + openpyxl (轻量 Excel 解析)
+通信机制：HTTP RESTful (状态同步) + Server-Sent Events / SSE (流式打字机响应)
+架构特色：后端采用纯“鸭子类型 (Duck Typing)”，前端采用高斯模糊 UI、系统级防冲突快捷键及基于内存栈的全局撤销/重做系统。
+二、 项目物理结构与功能映射字典（核心修改指南）
+Mulberry 采用前后端分离的“单体仓库 (Monorepo)”结构。以下为项目目录树及对应的修改索引。当您面临新需求时，请直接查阅【扩展需求对应指南】定位文件，无需全局阅读代码。
+
+mulberry/
+│
+├── .gitignore [Git忽略清单] 隔离了虚拟环境、密钥与依赖包。
+│
+├── mulberry-backend/ [Python 后端服务目录]
+│ ├── venv/ (本地生成的虚拟环境，不入库)
+│ └── main.py [后端主核心进程] 处理所有逻辑、API和状态栈。
+│
+└── mulberry-frontend/ [Node.js 前端 UI 目录]
+├── package.json [前端依赖配置文件]
+├── vite.config.js [Vite构建配置] 已挂载 Tailwind V4 插件。
+├── src/
+│ ├── index.css [全局样式表] 注入了 Tailwind 指令与重置样式。
+│ ├── main.jsx [React 挂载点] 渲染主应用。
+│ ├── InitialElements.js [出厂初始图纸] 定义首次打开时的节点和连线坐标。
+│ ├── CustomElements.jsx [自定义渲染器] 定义节点长什么样、双击编辑逻辑。
+│ ├── Sidebar.jsx [左侧工具栏] 提供可拖拽的新节点模板。
+│ └── App.jsx [全端大总管] 融合所有组件、快捷键、API 推流请求。
+
+扩展需求对应指南 (Where to Edit) <<<<<<<<
+
+【场景 1：我要增加一种全新的节点种类（例如：“判断分支块”）】
+
+第一步：打开 src/CustomElements.jsx。
+编写新的 React 组件（参考 RoleNode 等），定义它的背景色、文字和 Handle（连接点）。
+第二步：打开 src/Sidebar.jsx。
+在 templates 数组中增加新节点的数据，使它出现在左侧工具栏可供拖拽。
+第三步：打开 src/App.jsx。
+在顶部的 nodeTypes 字典中注册您的新节点，并在 onDrop 生成逻辑中配置它的初始留空状态。
+
+【场景 2：我要修改大语言模型 (LLM) 的调用逻辑或接入新的 API 供应商（如 Claude）】
+
+唯一修改点：打开 mulberry-backend/main.py。
+定位到 _chat_generator 异步生成器函数。
+在包含 provider.lower() in ['deepseek', 'openai'] 的判断及下方的 httpx 发包请求体中，追加您新厂商的 Base URL、Header 格式与 Body 组装逻辑即可。流式下发 (yield f"event: text...") 的逻辑是各家通用的。
+
+【场景 3：我要修改 Excel 配置文件的读取规则或表头规范】
+
+唯一修改点：打开 mulberry-backend/main.py。
+寻找 /api/settings/verify_excel 路由（用于前端合法性验证亮绿灯）以及 _chat_generator 中的 Excel 遍历寻址逻辑。修改 expected_headers 列表即可。
+
+【场景 4：修改默认快捷键或更改撤销/重做栈的步数限制】
+
+前端快捷键：打开 src/App.jsx，定位到 handleKeyDown 事件监听器，修改 .ctrlKey 和 key === 'x' 的判定。
+后端栈空间：打开 mulberry-backend/main.py。目前的 history_stack 把所有历史存在内存。如需限制上限避免爆内存，可在 /api/history/push 路由内增加 if len(history_stack) > 50: history_stack.pop(0) 的队列限制逻辑。
+
+【场景 5：调整画面的默认布局，或者添加一连串预设好的对话拓扑】
+
+唯一修改点：打开 src/InitialElements.js。
+按 JSON 格式修改 X/Y 坐标轴、预设文字、连线的 source（源）和 target（目标）ID。
+
+【场景 6：我需要节点中的输入框能够支持 Markdown 渲染或图片插入】
+
+唯一修改点：打开 src/CustomElements.jsx。
+重写 InlineEditableArea 组件。将目前使用的简易 <textarea> 替换为您引入的富文本编辑器库（如 ReactQuill 或 Markdown-it）。
+
+三、 生产/开发环境搭建与部署流 (Windows 11)
+当您或您的团队在一台全新的 Windows 11 电脑上拉取 Github 仓库后，请严格按以下顺序进行冷启动：
+
+【环境准备阶段】
+
+确保电脑已安装 Node.js (推荐 v20 LTS 及以上版本)。
+确保电脑已安装 Python 3.12，且将其添加至了系统全局环境变量 (PATH)。
+使用 Win + R 键入 sysdm.cpl，在“环境变量”中事先配置好您需要用到的 LLM 凭证（例如：新建系统变量 DEEPSEEK_API_KEY，值为您的真实 Key）。
+在桌面或其他位置准备好符合规范的 角色配置.xlsx 文件。
+【后端 (Python) 启动流程】
+
+打开终端 (PowerShell)，导航至克隆下来的仓库根目录并进入后端文件夹：
+cd mulberry\mulberry-backend
+
+生成专属于本机的 Python 虚拟环境：
+python -m venv venv
+
+激活虚拟环境 (您会看到终端行首出现 (venv) 标识)：
+.\venv\Scripts\activate
+
+安装轻量级后端四大金刚依赖：
+pip install fastapi uvicorn httpx openpyxl
+
+启动后端监听大盘 (默认运行在 8000 端口)：
+uvicorn main:app --reload
+(注意：保持此命令提示符敞开，不要关闭)
+
+【前端 (Node.js) 启动流程】
+
+新开一个终端 (PowerShell) 窗口，导航至前端文件夹：
+cd mulberry\mulberry-frontend
+
+安装 NPM 依赖包 (此过程会根据 package.json 自动安装 Vite, React Flow 等组件)：
+npm install
+
+运行本地极速热替换开发服务器：
+npm run dev
+
+终端会输出形如 http://localhost:5173 的地址。由于配置了局域网免密映射，按住 Ctrl 键单击该链接即可在默认浏览器中开启您完整的 Mulberry 画布。
+【首次握手操作】
+进入前端画面后，点击右上角齿轮 (设置模态框)，填入您的 角色配置.xlsx 绝对系统路径，点击空白处触发验证。标题变为浅绿色即代表全系统总线连通完毕，一切就绪。
+
+====================================================================
+[文档结束 | 最终更新日：2026-03]

@@ -1,0 +1,15 @@
+后端
+在mulberry-backend文件夹中的空白处右键打开powershell，激活当前的虚拟环境
+.\venv\Scripts\Activate.ps1
+
+启动后端
+uvicorn main:app --reload
+
+
+前端
+在mulberry-frontend文件夹中的空白处右键打开powershell
+
+启动前端
+npm run dev
+
+
