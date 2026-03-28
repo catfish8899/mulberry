@@ -1,105 +1,91 @@
 ====================================================================
-Mulberry (桑葚) 代理微框架 - 核心开发者说明书与架构指南 (解耦与持久化双擎版)
+Mulberry (桑葚) 代理微框架 - 核心开发者说明书与架构指南
+(阶段：解耦持久化双擎 & 毛玻璃视效动态引擎版)
+
 一、 项目基本情况概述
 
 Mulberry 是一个基于“有向无环图 (DAG)”原则构建的、面向多 Agent 协同与上下文管理的轻量级可视化执行微框架。
 
-本项目的核心思想是“拓扑即逻辑”：通过前端画布上的节点连线，动态定义大语言模型 (LLM) 的身份、记忆上下文以及执行流向。项目遵循极简 MVP（最小可行性产品）原则，摒弃了繁重的 ORM 型数据库和过度封装的第三方 LLM 链式库（如 LangChain），从而赋予开发者绝对的底层控制权。
+本项目的核心思想是“拓扑即逻辑”：通过前端画布上的节点连线，动态定义大语言模型 (LLM) 的身份、记忆上下文以及执行流向。项目遵循极简 MVP（最小可行性产品）原则，摒弃了繁重的 ORM 型数据库和过度封装的第三方库，赋予开发者绝对的底层控制权。
 
-【最新架构演进】
-目前框架已全面完成了“前端生命周期解耦”与“零数据库本地双轨持久化”。系统不再依赖纯内存态，能够将系统配置与画布工程物理落盘至本地 .json 文件，实现无缝的冷启动断点续传。
+【最新架构演进：全景毛玻璃 Z 轴层叠与动态渲染引擎】
 
+布局重构：彻底抛弃 Flex 平铺切割排版，采用“中心画布 100% 铺底 + 侧边栏/小地图 Absolute 绝对定位悬浮”的 Z 轴层叠架构，实现了画布节点可丝滑穿透底层 UI 的全景沉浸式工作台。
+渲染引擎：弃用写死的 Tailwind 静态色值类，跨越 React 生命周期，采用 var(--uop)（上层视图组透明度）与 var(--nop)（节点视图组透明度）两大原生 CSS 变量接力渲染。实现了百帧级流畅拖动、无重绘滞后的实时光学混合与毛玻璃 (Glassmorphism) 视效。
+双轨持久化引擎：零数据库设计。系统配置（Excel 数据源路径、两套独立透明度偏好）与拓扑图纸工程（节点/连线坐标与内容）均能实现向本地 .json 的静默防丢档物理直写。
 【技术栈组成】
 运行环境：Windows 11 / Node.js / Python 3.12
 前端体系：Vite + React (纯 JavaScript) + @xyflow/react (图编译核心) + Tailwind CSS (UI 样式)
-后端体系：FastAPI + httpx (高并发外网请求) + openpyxl (轻量 Excel 解析)
-通信机制：HTTP RESTful (状态/持久化同步) + Server-Sent Events / SSE (流式打字机响应)
-数据存储：纯本地双轨 JSON 物理挂载 (零数据库设计)
-架构特色：后端采用纯“鸭子类型 (Duck Typing)”，前端拥有高斯模糊防冲突 UI、组件与逻辑深度解耦架构、全时段内存级撤销/重做栈，及基于底层操作系统的防丢档文件直写能力。
+后端体系：FastAPI + httpx (高并发流式请求) + openpyxl (轻量 Excel 解析)
+通信机制：HTTP RESTful + Server-Sent Events / SSE (流式打字机响应) + CSS Custom Properties (纯视觉帧渲染)
 
 二、 项目物理结构与功能映射字典（核心修改指南）
 
-Mulberry 采用前后端分离的“单体仓库 (Monorepo)”结构。前端实现了 UI 视图层、业务逻辑层与主事件栈的职能分离；后端兼负轻量级文件 I/O 调度总线的职责。
-
-以下为更新后的项目目录树及对应的修改索引。当面临新需求时，请直接查阅【扩展需求对应指南】定位文件。
+Mulberry 采用前后端分离的“单体仓库 (Monorepo)”结构。前端实现了 UI 视图层、业务逻辑层与主事件栈的深度职能分离；后端兼负轻量级文件 I/O 调度总线的职责。
 
 mulberry/
 │
-├── .gitignore [Git忽略清单] 隔离了虚拟环境、密钥与依赖包。
+├── .gitignore [Git忽略清单]
 │
 ├── mulberry-backend/ [Python 后端服务目录]
-│ ├── venv/ (本地生成的虚拟环境，不入库)
-│ ├── main.py [后端主核心进程] 处理非阻塞业务逻辑、鸭子类型状态栈及本地 I/O 读写。
-│ ├── config.json (系统运行时自动生成) 持久化锁档系统设置的物理介质。
-│ └── canvas_data.json (系统运行时自动生成) 图谱拓扑工程文件 (Nodes/Edges) 的落盘仓库。
+│ ├── main.py [后端主核心进程] 处理非阻塞业务、鸭子类型请求流、文件总线读写，且囊括透明度阈值的存取与安全底座设置。
+│ ├── config.json (系统自动生成) 持久化锁档系统设置 (Excel路径、upper_opacity、node_opacity)。
+│ └── canvas_data.json (系统自动生成) 拓扑工程文件 (Nodes/Edges) 的落盘仓库。
 │
 └── mulberry-frontend/ [Node.js 前端 UI 目录]
-├── package.json [前端依赖配置文件]
-├── vite.config.js [Vite构建配置] 已挂载 Tailwind V4 插件。
-├── src/
-├── index.css [全局样式表] 注入了 Tailwind 指令与重置样式。
-├── main.jsx [React 挂载点] 渲染主应用。
-├── InitialElements.js [出厂初始图纸] 定义首次打开大盘以及“重置”动作所依赖的基准坐标。
-├── CustomElements.jsx [自定义渲染器] 定义节点视觉构造、双击编辑逻辑。
-├── Sidebar.jsx [左侧工具栏] 提供可拖拽的新节点模板。
+├── vite.config.js [Vite构建配置] 支持 Tailwind V4 引擎。
+└── src/
+├── index.css [全局样式表] 注入 Tailwind 指令。
+├── main.jsx [React 挂载点]
+├── InitialElements.js [出厂初始图纸] 定义“重置”动作所依赖的默认基准坐标。
+├── CustomElements.jsx [自定义渲染器(重要)] 包含画布内实测节点。已全面接入 rgba(r,g,b,var(--nop)) 色彩向量算法。
+├── Sidebar.jsx [左侧工具栏(重要)] 模具数据源。同样接驳 CSS 变量体系，以确保拖拽前后的视觉材质统一。
 ├── components/
-│ └── FlowUI.jsx [独立视图组件层] 收容顶部时钟、设置模态验证层、及右侧撤销/重做/保存/重置维序面板。
+│ └── FlowUI.jsx [独立视图组件层] 收容时钟、设置模态验证层、透明度双滑块调节器及右侧控制版面。全面接入 var(--uop)。
 ├── hooks/
-│ └── useFlowEngine.js [核心业务网络层] 收聚了 SSE 流式管道、各类 Fetch I/O 通信请求及图谱推拉取动作。
-└── App.jsx [主应用装配总管] 负责基础画布挂载、图纸防冲突快捷键监听、挂载期盘历史回溯劫持及事件委派。
+│ └── useFlowEngine.js [核心业务网络层] 收聚 SSE 管道、Fetch 通信请求及图谱推拉状态栈。
+└── App.jsx [主应用装配总管] 实现 Z 轴绝对定位排版，负责基础画布挂载、热键监听及越权越级覆写三方库样式的入口。
 
 扩展需求对应指南 (Where to Edit) <<<<<<<<
 
 【场景 1：增加一种全新的节点种类（例如：“判断分支块”）】
-第一步：打开 src/CustomElements.jsx，编写新的 React 节点组件。
-第二步：打开 src/Sidebar.jsx，在 templates 数组中增加新节点的数据使其可拖拽。
-第三步：打开 src/App.jsx，在顶部的 nodeTypes 字典中注册新节点，并在 onDrop 生成指令中配置它的初始数据态。
+第一步：在 src/CustomElements.jsx 编写新的节点组件，必须使用 bg-[rgba(R,G,B,var(--nop,0.85))] 语法对接系统透明度，并挂载 backdrop-blur-sm；
+第二步：在 src/Sidebar.jsx 的 templates 数组中增加该节点字典，class 属性需保持严格一致；
+第三步：在 src/App.jsx 顶部字典中注册，于 onDrop 中配置其初始生成姿态。
 
-【场景 2：修改大语言模型 (LLM) 的调用逻辑或接入新的 API 供应商】
-唯一修改点：打开 mulberry-backend/main.py。
-定位到 _chat_generator 异步生成器函数内部。在 httpx 发包请求体中追加新厂商的 Base URL、鉴权标头与报文组装。
+【场景 2：增删或修改全局悬浮 UI（如面板、时钟、设定菜单）】
+修改点：打开 src/components/FlowUI.jsx。
+此类组件已接入 var(--uop) 渲染流。若要增加新悬浮框，需在其 className 中注入如 bg-[rgba(255,255,255,var(--uop,0.70))] backdrop-blur-md 等滤镜以保持全应用毛玻璃质感统一。
 
-【场景 3：增删或修改悬浮控制 UI（时钟、设置中心、保存控制版面）】
-唯一修改点：打开 src/components/FlowUI.jsx。
-该文件收聚了所有脱离中心画布的悬浮组件。修改 Tailwind 样式或是回调入参即可，不会影响底层图的坐标系运算。
-
-【场景 4：修改前后端通信 API 路由或数据推拉机制】
-前端网络干涉：打开 src/hooks/useFlowEngine.js，修改底层的 fetch() 信道规则。
-后端路由干涉：打开 mulberry-backend/main.py，修改 @app.get 或 @app.post 修饰器。
-
-【场景 5：修改数据落盘（持久化）存储的文件名或路径规则】
+【场景 3：修改大语言模型 (LLM) 的调用逻辑或接入新的 API 供应商】
 修改点：打开 mulberry-backend/main.py。
-于物理常量定义区调整 CONFIG_FILE_PATH 或 CANVAS_DATA_FILE_PATH 变量的生成逻辑。
+定位到 _chat_generator 函数内。根据 openpyxl 提取的数据字典，在 httpx 块中重构 Base URL、报文组装。
 
-【场景 6：调整默认的页面出厂布局】
-修改点：打开 src/InitialElements.js。按 JSON 格式修改默认字典。用户在前端点击“重置”按钮时，调用的即是此处的坐标系。
+【场景 4：修改数据落盘（配置项扩充或持久化规则）】
+修改点 1：后端打开 main.py，于 save_config 路由内追加新的 JSON 键值拦截。
+修改点 2：前端若需暴露该设置，在 FlowUI.jsx 的 SettingsModal 中增加对应滑块或输入框，并在 Fetch 请求体中补传。
 
-三、 生产/开发环境搭建与部署流 (针对 Windows 11 环境)
+【场景 5：干涉节点拖拽、连线生成、双击编辑的总规则】
+修改点：基础鼠标动作和 React Flow 原生响应落在 App.jsx。具体的节点内行内编辑 (InlineEditableArea) 及状态切换的双击事件 (onDoubleClick) 落在 CustomElements.jsx 并在此派发 mulberry-action-settled 保存指令。
 
-当在一台全新的 Windows 11 电脑上启动 Mulberry 时，请严格按以下顺序进行总线通电：
+三、 生产/开发环境搭建与部署流 (针对 Windows 11)
 
 【环境准备阶段】
 
-确保已安装 Node.js (推荐 v20 LTS 或以上)。
-确保已安装 Python 3.12，且注入全局环境变量 (PATH)。
-在系统的“环境变量”高级设置中，事先配置所需的 LLM 凭证（例如：新建 DEEPSEEK_API_KEY，值为真实令牌）。
-在硬盘任意位置准备符合规范的 角色配置.xlsx 文件。
-【后端 (Python) 启动流程】
+确保已安装 Node.js (推荐 v20 LTS 或以上)与 Python 3.12。
+确保在系统环境变量中事先配置了所需的 LLM 凭证（例如：新建 DEEPSEEK_API_KEY）。
+准备符合标准表头的 角色配置.xlsx 文件。
+【启动顺序规约】
 
-终端 (PowerShell) 切入工作空间：cd mulberry\mulberry-backend
-建立 Python 虚拟环境沙盒：python -m venv venv
-激活沙盒权限：.\venv\Scripts\activate
-安装核心基石库：pip install fastapi uvicorn httpx openpyxl
-唤醒 ASGI 网关监听大盘 (默认 localhost:8000)：uvicorn main:app --reload
-【前端 (Node.js) 启动流程】
+终端切入后端：cd mulberry\mulberry-backend
+唤醒沙盒：.\venv\Scripts\activate
+启动 ASGI 总线：uvicorn main:app --reload
+另起新终端切入前端：cd mulberry\mulberry-frontend
+启动 Vite 热更总控：npm run dev
+访问日志链接（http://localhost:5173） 。
+【双轨引擎操作规约与持久化行为鉴权】
 
-新开独立终端，切入前端空间：cd mulberry\mulberry-frontend
-挂载 NPM 依赖：npm install
-启动 Vite 本地服务器：npm run dev
-单击终端日志中的 http://localhost:5173 进入全景画布。由于已配置挂载期拦截，系统将自动尝试于后台读取并渲染您最后一次物理存盘的拓扑结构。
-【关于持久化双擎的操作规约说明】
-
-设置固化 (自动)：点击页面右上角齿轮，填入 .xlsx 文件绝对路径。点击面板外空白处停止编辑，引擎将自动向后端请求合法性校验；一旦校验变绿，系统即立刻静默落盘至 config.json。
-画布固化 (手动)：由于拓扑节点数量可能极度庞大且变更频繁，系统采用人为下发指令制。在右侧控制浮窗中点击“保存”按钮，当前全景节点与连线将被封包并覆写至本地 canvas_data.json；点击“重置”可强制抹除当前屏幕数据并退回出厂态记录点（不影响已保存的旧硬盘档位）。
+环境变量/透视率自动固化：点击右上角齿轮，修改路径或拖拽透明度滑块。验证绿灯或鼠标/触控松开 (onMouseUp) 时，系统将静默执行 HTTP POST 向硬盘覆写并锁档。冷启必定恢复。
+画布拓扑手动固化：画布极大的数据吞吐量由人为下发指令管理。由于项目含内存保护机制，拖拽、修图后立刻按 [Ctrl+Z] 支持毫秒级内存回溯；确认节点拓扑无误后，必须手刻点击右上角“保存（深绿按钮）”进行物理封装防丢档。
 ====================================================================
-[Mulberry 微框架文档结束 | 阶段：解耦与持久化双擎版落成 | 最终更新日：2026-03]
+[Mulberry 微框架文档结束 | 阶段：解耦持久化双擎 & 毛玻璃视效动态引擎版 | 更新日：2026-03]

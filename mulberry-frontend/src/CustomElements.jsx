@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position, useReactFlow, EdgeLabelRenderer, getBezierPath } from '@xyflow/react';
 
-// === 【新增】触发同步机制的公共辅助函数 ===
-// 延时 50ms 是为了确保 React Flow 的内部状态已经完成了 useState 的重渲染更新
 const notifyActionSettled = () => {
   setTimeout(() => window.dispatchEvent(new Event('mulberry-action-settled')), 50);
 };
@@ -23,7 +21,6 @@ const InlineEditableArea = ({ initialText, nodeId, fieldKey, customClasses }) =>
 
   const handleBlur = () => {
     setIsEditing(false);
-    // 判断内容是否真的改变，减少无效的历史堆叠
     if (text !== initialText) {
       setNodes((nds) =>
         nds.map((node) => {
@@ -31,17 +28,13 @@ const InlineEditableArea = ({ initialText, nodeId, fieldKey, customClasses }) =>
           return node;
         })
       );
-      notifyActionSettled(); // 【触发】编辑完成，算作有效操作
+      notifyActionSettled(); 
     }
   };
 
   return isEditing ? (
     <textarea
-      ref={inputRef}
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={handleBlur}
-      onKeyDown={(e) => e.stopPropagation()}
+      ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} onBlur={handleBlur} onKeyDown={(e) => e.stopPropagation()}
       className={`nodrag nopan w-full bg-white/70 text-black border-2 border-blue-400 rounded outline-none resize-none px-1 overflow-hidden ${customClasses}`}
       rows={text.split('\n').length || 1}
     />
@@ -53,7 +46,8 @@ const InlineEditableArea = ({ initialText, nodeId, fieldKey, customClasses }) =>
 };
 
 export const RolePromptNode = ({ id, data }) => (
-  <div className="bg-lime-400 border-2 border-lime-600 rounded-lg shadow-md w-48 font-sans">
+  // RGB: 163, 230, 53 -> lime-400
+  <div className="bg-[rgba(163,230,53,var(--nop,0.85))] backdrop-blur-sm border-2 border-lime-600 rounded-lg shadow-md w-48 font-sans">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     <div className="p-2 border-b border-lime-600 font-bold text-gray-800">{data.title}</div>
     <div className="p-2 min-h-16 text-sm text-gray-800">
@@ -64,7 +58,7 @@ export const RolePromptNode = ({ id, data }) => (
 );
 
 export const RoleNode = ({ id, data }) => (
-  <div className="bg-lime-400 border-2 border-lime-600 rounded-lg shadow-md w-28 font-sans text-center">
+  <div className="bg-[rgba(163,230,53,var(--nop,0.85))] backdrop-blur-sm border-2 border-lime-600 rounded-lg shadow-md w-28 font-sans text-center">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     <div className="p-2 border-b border-lime-600 font-bold text-gray-800">{data.title}</div>
     <div className="p-2 font-medium text-gray-800">
@@ -89,15 +83,16 @@ export const ContentNode = ({ id, data }) => {
         return node;
       })
     );
-    notifyActionSettled(); // 【触发】双击切换状态，算作有效操作
+    notifyActionSettled();
   };
 
   const isCurrent = data.status === "当前";
-  const bgClass = isCurrent ? "bg-amber-400" : "bg-gray-300";
+  // RGB 分流挂载：琥珀 400 与 铁灰 300 
+  const bgClass = isCurrent ? "bg-[rgba(251,191,36,var(--nop,0.85))]" : "bg-[rgba(209,213,219,var(--nop,0.85))]";
   const borderClass = isCurrent ? "border-amber-600" : "border-gray-500";
 
   return (
-    <div className={`${bgClass} border-2 ${borderClass} rounded-lg shadow-md w-56 font-sans transition-colors duration-300`}>
+    <div className={`${bgClass} backdrop-blur-sm border-2 ${borderClass} rounded-lg shadow-md w-56 font-sans transition-colors duration-300`}>
       <Handle type="target" position={Position.Top} className="!bg-gray-600" />
       <div className={`p-2 border-b ${borderClass} flex justify-between items-center`}>
         <span className="font-bold text-gray-800">{data.title}</span>
@@ -118,7 +113,8 @@ export const ContentNode = ({ id, data }) => {
 };
 
 export const DebugNode = ({ data }) => (
-  <div className="bg-amber-500 border-2 border-amber-700 rounded-lg shadow-md font-sans text-center px-4 py-2 text-white font-bold whitespace-pre-wrap">
+  // RGB: 245, 158, 11 -> amber-500
+  <div className="bg-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-2 border-amber-700 rounded-lg shadow-md font-sans text-center px-4 py-2 text-gray-900 font-bold whitespace-pre-wrap">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     {data.title}
     <Handle type="source" position={Position.Bottom} className="!bg-gray-600" />
@@ -126,11 +122,10 @@ export const DebugNode = ({ data }) => (
 );
 
 export const ButtonNode = ({ id, data }) => (
-  // 注意，原先的 hover 和 scale 动画仍然保留，在此按钮上新增 onClick
-  <div className="bg-gradient-to-br from-amber-300 to-amber-500 border-2 border-amber-600 rounded-lg shadow-md text-center hover:scale-105 active:scale-95 cursor-pointer transition-transform duration-100">
+  // 渐变色断点：从琥珀 300 衰减致 琥珀 500
+  <div className="bg-gradient-to-br from-[rgba(253,230,138,var(--nop,0.85))] to-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-2 border-amber-600 rounded-lg shadow-md text-center hover:scale-105 active:scale-95 cursor-pointer transition-transform duration-100">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     <button 
-      // 派发事件，并将自己的 id 传送出去，便于主控应用溯源寻边
       onClick={() => window.dispatchEvent(new CustomEvent('mulberry-start-chat', {detail: { nodeId: id }}))}
       className="px-5 py-3 font-bold text-gray-800 bg-transparent border-none outline-none w-full h-full cursor-pointer"
     >
@@ -162,7 +157,7 @@ export const EditableEdge = ({
           return edge;
         })
       );
-      notifyActionSettled(); // 【触发】连线描述修改，算作有效操作
+      notifyActionSettled();
     }
   };
 

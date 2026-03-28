@@ -90,24 +90,43 @@ async def save_canvas_data(payload: Dict[str, Any]):
         return {"status": "error", "message": str(e)}
 
 
-# ====== 设置与校验 (Excel 路径配置) ======
+# ====== 设置与校验 (Excel 路径与透明度配置) ======
 @app.get("/api/settings/config")
 async def get_config():
     if os.path.exists(CONFIG_FILE_PATH):
         try:
             with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                return {"path": data.get("excel_path", "")}
+                return {
+                    "path": data.get("excel_path", ""),
+                    "upper_opacity": data.get("upper_opacity", 70),  # 注入默认读取安全底座
+                    "node_opacity": data.get("node_opacity", 85)
+                }
         except Exception as e:
             logging.warning(f"读取配置异常: {e}")
-    return {"path": ""}
+    return {"path": "", "upper_opacity": 70, "node_opacity": 85}
 
 @app.post("/api/settings/config")
 async def save_config(payload: Dict[str, Any]):
-    path = payload.get("path", "").strip()
+    # 为防止覆盖其他同级配置，改为了读写分离追加模式
+    data = {}
+    if os.path.exists(CONFIG_FILE_PATH):
+        try:
+            with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            pass
+
+    if "path" in payload:
+        data["excel_path"] = payload.get("path", "").strip()
+    if "upper_opacity" in payload:
+        data["upper_opacity"] = payload.get("upper_opacity")
+    if "node_opacity" in payload:
+        data["node_opacity"] = payload.get("node_opacity")
+
     try:
         with open(CONFIG_FILE_PATH, 'w', encoding='utf-8') as f:
-            json.dump({"excel_path": path}, f, ensure_ascii=False, indent=4)
+            json.dump(data, f, ensure_ascii=False, indent=4)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
