@@ -14,6 +14,16 @@ export default function Sidebar() {
     { type: 'rolePromptNode', title: '角色提示词', classes: 'bg-[rgba(163,230,53,var(--nop,0.85))] backdrop-blur-sm border-lime-600 text-gray-800' },
     { type: 'roleNode', title: '角色块', classes: 'bg-[rgba(163,230,53,var(--nop,0.85))] backdrop-blur-sm border-lime-600 text-gray-800' },
     { type: 'contentNode', title: '内容块', classes: 'bg-[rgba(209,213,219,var(--nop,0.85))] backdrop-blur-sm border-gray-500 text-gray-800' },
+    
+    // 工具块与模型调用分析节点
+    { type: 'toolNode', title: '工具块', classes: 'bg-[rgba(233,213,255,var(--nop,0.85))] backdrop-blur-sm border-[#581c87] text-black' },
+    { type: 'modelStatusNode', title: '模型调用情况', classes: 'bg-[rgba(191,219,254,var(--nop,0.85))] backdrop-blur-sm border-[#1e3a8a] text-black' },
+    
+    // ==========================================
+    // 新增：范围集合区拖放节点 (浅灰底盘 + 深边界)
+    // ==========================================
+    { type: 'collectionNode', title: '集合', classes: 'bg-[rgba(229,231,235,var(--nop,0.85))] backdrop-blur-sm border-gray-600 text-gray-800 border-dashed' },
+
     { type: 'debugNode', title: '调试标记\n开始', classes: 'bg-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-amber-700 text-gray-900' },
     { type: 'debugNode', title: '调试标记\n结束', classes: 'bg-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-amber-700 text-gray-900' },
     { type: 'buttonNode', title: '开始聊天按钮', classes: 'bg-gradient-to-br from-[rgba(253,230,138,var(--nop,0.85))] to-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-amber-600 text-gray-800' },

@@ -1,5 +1,6 @@
+// 顶层导入追挂：NodeResizer 大小调整插件
 import React, { useState, useRef, useEffect } from 'react';
-import { Handle, Position, useReactFlow, EdgeLabelRenderer, getBezierPath } from '@xyflow/react';
+import { Handle, Position, useReactFlow, EdgeLabelRenderer, getBezierPath, NodeResizer } from '@xyflow/react';
 
 const notifyActionSettled = () => {
   setTimeout(() => window.dispatchEvent(new Event('mulberry-action-settled')), 50);
@@ -112,8 +113,42 @@ export const ContentNode = ({ id, data }) => {
   );
 };
 
+export const ToolNode = ({ id, data }) => (
+  <div className="bg-[rgba(233,213,255,var(--nop,0.85))] backdrop-blur-sm border-2 border-[#581c87] rounded-lg shadow-md w-48 font-sans transition-colors duration-300">
+    <Handle type="target" position={Position.Top} className="!bg-[#581c87]" />
+    <div className="p-2 border-b border-[#581c87] font-bold text-black">{data.title}</div>
+    <div className="p-2 min-h-16 text-sm text-black font-medium">
+      <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" />
+    </div>
+    <Handle type="source" position={Position.Bottom} className="!bg-[#581c87]" />
+  </div>
+);
+
+export const ModelStatusNode = ({ id, data }) => (
+  <div className="bg-[rgba(191,219,254,var(--nop,0.85))] backdrop-blur-sm border-2 border-[#1e3a8a] rounded-lg shadow-md w-56 font-sans transition-colors duration-300">
+    <Handle type="target" position={Position.Top} className="!bg-[#1e3a8a]" />
+    <div className="p-2 border-b border-[#1e3a8a] font-bold text-black tracking-wider">{data.title}</div>
+    <div className="p-2 min-h-16 text-sm text-black font-medium font-mono">
+      <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" />
+    </div>
+    <Handle type="source" position={Position.Bottom} className="!bg-[#1e3a8a]" />
+  </div>
+);
+
+// ==========================================
+// 全新系统节点：空间范围节点 / 集合框 (Collection Node)
+// 架构特征：只带有骨架大小调整器 (NodeResizer)，无句柄、无文本。视觉采用浅灰/深灰。
+// ==========================================
+export const CollectionNode = ({ selected }) => (
+  <>
+    {/* 注入可形变矩阵控制柄，依据选中状态激活 */}
+    <NodeResizer color="#4b5563" isVisible={selected} minWidth={260} minHeight={200} />
+    {/* 尺寸 100% 贴合节点包裹层，使用一致性 var(--nop) 模糊材质 */}
+    <div className="w-full h-full bg-[rgba(229,231,235,var(--nop,0.85))] backdrop-blur-sm border-2 border-gray-600 rounded-xl transition-colors duration-300" />
+  </>
+);
+
 export const DebugNode = ({ data }) => (
-  // RGB: 245, 158, 11 -> amber-500
   <div className="bg-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-2 border-amber-700 rounded-lg shadow-md font-sans text-center px-4 py-2 text-gray-900 font-bold whitespace-pre-wrap">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     {data.title}
@@ -122,7 +157,6 @@ export const DebugNode = ({ data }) => (
 );
 
 export const ButtonNode = ({ id, data }) => (
-  // 渐变色断点：从琥珀 300 衰减致 琥珀 500
   <div className="bg-gradient-to-br from-[rgba(253,230,138,var(--nop,0.85))] to-[rgba(245,158,11,var(--nop,0.85))] backdrop-blur-sm border-2 border-amber-600 rounded-lg shadow-md text-center hover:scale-105 active:scale-95 cursor-pointer transition-transform duration-100">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     <button 
