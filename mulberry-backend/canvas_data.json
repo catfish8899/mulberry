@@ -1,20 +1,26 @@
 {
   "nodes": [
     {
-      "id": "node_prompt_alice",
-      "type": "rolePromptNode",
+      "id": "node_1775092959814_pzke5l",
+      "type": "collectionNode",
       "position": {
-        "x": 50,
-        "y": 300
+        "x": -152.967148560137,
+        "y": 51.18820562174329
       },
       "data": {
-        "title": "角色提示词",
-        "content": "你的名字是爱丽丝，\n你的特点是\n爱吃披萨 🍕"
+        "title": ""
       },
+      "style": {
+        "width": 360,
+        "height": 260
+      },
+      "zIndex": -1,
       "measured": {
-        "width": 192,
-        "height": 120
-      }
+        "width": 360,
+        "height": 260
+      },
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_role_user",
@@ -79,7 +85,7 @@
       },
       "measured": {
         "width": 224,
-        "height": 222
+        "height": 223
       }
     },
     {
@@ -111,7 +117,7 @@
         "width": 139,
         "height": 51
       },
-      "selected": true
+      "selected": false
     },
     {
       "id": "node_debug_end",
@@ -127,6 +133,63 @@
         "width": 99,
         "height": 67
       }
+    },
+    {
+      "id": "node_1775092963275_elmqgx",
+      "type": "toolNode",
+      "position": {
+        "x": -173.76691408310512,
+        "y": -91.00381264448029
+      },
+      "data": {
+        "title": "工具块",
+        "content": "请配置工具参数或 API Endpoint",
+        "systemPrompt": "执行该节点时，你必须作为函数调用实体(Function-Calling Agent)，严格依据描述格式化输出指定的 JSON 参数以便挂载外部工具。"
+      },
+      "measured": {
+        "width": 192,
+        "height": 109
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_prompt_alice",
+      "type": "rolePromptNode",
+      "position": {
+        "x": 8.786647996020292,
+        "y": 142.46946245448146
+      },
+      "data": {
+        "title": "角色提示词",
+        "content": "你的名字是爱丽丝，\n你的特点是\n爱吃披萨 🍕"
+      },
+      "measured": {
+        "width": 192,
+        "height": 121
+      },
+      "selected": false,
+      "dragging": false,
+      "parentId": "node_1775092959814_pzke5l"
+    },
+    {
+      "id": "node_1775092964226_8gisfh",
+      "type": "modelStatusNode",
+      "position": {
+        "x": 186.03601497745672,
+        "y": 13.65483590951478
+      },
+      "data": {
+        "title": "模型调用情况",
+        "content": "等待后方引擎调度捕获：\n网络消耗、响应时间以及 Token 开销矩阵信息..."
+      },
+      "measured": {
+        "width": 224,
+        "height": 121
+      },
+      "selected": false,
+      "dragging": false,
+      "parentId": "node_1775092959814_pzke5l"
     }
   ],
   "edges": [
