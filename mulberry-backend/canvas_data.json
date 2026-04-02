@@ -1,33 +1,11 @@
 {
   "nodes": [
     {
-      "id": "node_1775092959814_pzke5l",
-      "type": "collectionNode",
-      "position": {
-        "x": -152.967148560137,
-        "y": 51.18820562174329
-      },
-      "data": {
-        "title": ""
-      },
-      "style": {
-        "width": 360,
-        "height": 260
-      },
-      "zIndex": -1,
-      "measured": {
-        "width": 360,
-        "height": 260
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
       "id": "node_role_user",
       "type": "roleNode",
       "position": {
-        "x": 280,
-        "y": 150
+        "x": 388.99999999999994,
+        "y": 112.00000000000006
       },
       "data": {
         "title": "角色块",
@@ -36,14 +14,16 @@
       "measured": {
         "width": 112,
         "height": 84
-      }
+      },
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_role_alice",
       "type": "roleNode",
       "position": {
-        "x": 280,
-        "y": 480
+        "x": 337.9999999999999,
+        "y": 364.0000000000001
       },
       "data": {
         "title": "角色块",
@@ -52,7 +32,9 @@
       "measured": {
         "width": 112,
         "height": 84
-      }
+      },
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_content_current",
@@ -69,7 +51,8 @@
       "measured": {
         "width": 224,
         "height": 126
-      }
+      },
+      "selected": false
     },
     {
       "id": "node_content_plan",
@@ -81,12 +64,13 @@
       "data": {
         "title": "内容块",
         "status": "历史",
-        "content": "我的特点？哈哈，我就是爱丽丝，一个永远在寻找下一块美味披萨的AI！🍕 无论是聊天、解答问题，还是帮你找有趣的冷知识，我都能边“吃”披萨边完成～ 需要帮忙的时候随时叫我，不过如果闻到虚拟披萨香味……那可能是我在偷偷加餐哦！😄"
+        "content": "我的特点？哈哈，除了爱吃披萨之外，我还喜欢用轻松幽默的方式聊天，偶尔会冒出一些奇奇怪怪的比喻～ 需要帮忙的时候，我随时都在哦！ 😄🍕"
       },
       "measured": {
         "width": 224,
-        "height": 223
-      }
+        "height": 162
+      },
+      "selected": false
     },
     {
       "id": "node_debug_start",
@@ -107,8 +91,8 @@
       "id": "node_btn_start",
       "type": "buttonNode",
       "position": {
-        "x": 880,
-        "y": 320
+        "x": 862,
+        "y": 327
       },
       "data": {
         "title": "开始聊天按钮"
@@ -117,7 +101,8 @@
         "width": 139,
         "height": 51
       },
-      "selected": false
+      "selected": true,
+      "dragging": false
     },
     {
       "id": "node_debug_end",
@@ -135,30 +120,11 @@
       }
     },
     {
-      "id": "node_1775092963275_elmqgx",
-      "type": "toolNode",
-      "position": {
-        "x": -173.76691408310512,
-        "y": -91.00381264448029
-      },
-      "data": {
-        "title": "工具块",
-        "content": "请配置工具参数或 API Endpoint",
-        "systemPrompt": "执行该节点时，你必须作为函数调用实体(Function-Calling Agent)，严格依据描述格式化输出指定的 JSON 参数以便挂载外部工具。"
-      },
-      "measured": {
-        "width": 192,
-        "height": 109
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
       "id": "node_prompt_alice",
       "type": "rolePromptNode",
       "position": {
-        "x": 8.786647996020292,
-        "y": 142.46946245448146
+        "x": 71.81949943588313,
+        "y": 195.65766807622484
       },
       "data": {
         "title": "角色提示词",
@@ -166,30 +132,10 @@
       },
       "measured": {
         "width": 192,
-        "height": 121
+        "height": 120
       },
       "selected": false,
-      "dragging": false,
-      "parentId": "node_1775092959814_pzke5l"
-    },
-    {
-      "id": "node_1775092964226_8gisfh",
-      "type": "modelStatusNode",
-      "position": {
-        "x": 186.03601497745672,
-        "y": 13.65483590951478
-      },
-      "data": {
-        "title": "模型调用情况",
-        "content": "等待后方引擎调度捕获：\n网络消耗、响应时间以及 Token 开销矩阵信息..."
-      },
-      "measured": {
-        "width": 224,
-        "height": 121
-      },
-      "selected": false,
-      "dragging": false,
-      "parentId": "node_1775092959814_pzke5l"
+      "dragging": false
     }
   ],
   "edges": [
