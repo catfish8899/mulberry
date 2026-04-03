@@ -51,6 +51,7 @@ export const RolePromptNode = ({ id, data }) => (
   <div className="bg-[rgba(163,230,53,var(--nop,0.85))] backdrop-blur-sm border-2 border-lime-600 rounded-lg shadow-md w-48 font-sans">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     <div className="p-2 border-b border-lime-600 font-bold text-gray-800">{data.title}</div>
+    {/* 保持原有的 text-sm */}
     <div className="p-2 min-h-16 text-sm text-gray-800">
       <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" />
     </div>
@@ -62,7 +63,8 @@ export const RoleNode = ({ id, data }) => (
   <div className="bg-[rgba(163,230,53,var(--nop,0.85))] backdrop-blur-sm border-2 border-lime-600 rounded-lg shadow-md w-28 font-sans text-center">
     <Handle type="target" position={Position.Top} className="!bg-gray-600" />
     <div className="p-2 border-b border-lime-600 font-bold text-gray-800">{data.title}</div>
-    <div className="p-2 font-medium text-gray-800">
+    {/* 追加 text-sm 保持字号与内容块统一 */}
+    <div className="p-2 text-sm font-medium text-gray-800">
       <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" customClasses="text-center" />
     </div>
     <Handle type="source" position={Position.Bottom} className="!bg-gray-600" />
@@ -105,6 +107,7 @@ export const ContentNode = ({ id, data }) => {
           {data.status || "待编辑"}
         </span>
       </div>
+      {/* 基准的 text-sm */}
       <div className="p-2 min-h-20 text-sm text-gray-800">
         <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" />
       </div>
@@ -117,6 +120,7 @@ export const ToolNode = ({ id, data }) => (
   <div className="bg-[rgba(233,213,255,var(--nop,0.85))] backdrop-blur-sm border-2 border-[#581c87] rounded-lg shadow-md w-48 font-sans transition-colors duration-300">
     <Handle type="target" position={Position.Top} className="!bg-[#581c87]" />
     <div className="p-2 border-b border-[#581c87] font-bold text-black">{data.title}</div>
+    {/* 工具块同样保持 text-sm */}
     <div className="p-2 min-h-16 text-sm text-black font-medium">
       <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" />
     </div>
@@ -125,11 +129,12 @@ export const ToolNode = ({ id, data }) => (
 );
 
 export const ModelStatusNode = ({ id, data }) => (
-  <div className="bg-[rgba(191,219,254,var(--nop,0.85))] backdrop-blur-sm border-2 border-[#1e3a8a] rounded-lg shadow-md w-56 font-sans transition-colors duration-300">
+  <div className="bg-[rgba(191,219,254,var(--nop,0.85))] backdrop-blur-sm border-2 border-[#1e3a8a] rounded-lg shadow-md w-64 font-sans transition-colors duration-300">
     <Handle type="target" position={Position.Top} className="!bg-[#1e3a8a]" />
     <div className="p-2 border-b border-[#1e3a8a] font-bold text-black tracking-wider">{data.title}</div>
-    <div className="p-2 min-h-16 text-sm text-black font-medium font-mono">
-      <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" />
+    {/* 将 text-xs 修改为 text-sm，保持字号与内容块统一 */}
+    <div className="p-2 min-h-16 text-sm text-black font-medium font-mono leading-relaxed">
+      <InlineEditableArea initialText={data.content} nodeId={id} fieldKey="content" customClasses="text-left" />
     </div>
     <Handle type="source" position={Position.Bottom} className="!bg-[#1e3a8a]" />
   </div>
@@ -137,13 +142,10 @@ export const ModelStatusNode = ({ id, data }) => (
 
 // ==========================================
 // 全新系统节点：空间范围节点 / 集合框 (Collection Node)
-// 架构特征：只带有骨架大小调整器 (NodeResizer)，无句柄、无文本。视觉采用浅灰/深灰。
 // ==========================================
 export const CollectionNode = ({ selected }) => (
   <>
-    {/* 注入可形变矩阵控制柄，依据选中状态激活 */}
     <NodeResizer color="#4b5563" isVisible={selected} minWidth={260} minHeight={200} />
-    {/* 尺寸 100% 贴合节点包裹层，使用一致性 var(--nop) 模糊材质 */}
     <div className="w-full h-full bg-[rgba(229,231,235,var(--nop,0.85))] backdrop-blur-sm border-2 border-gray-600 rounded-xl transition-colors duration-300" />
   </>
 );

@@ -4,8 +4,8 @@
       "id": "node_role_user",
       "type": "roleNode",
       "position": {
-        "x": 388.99999999999994,
-        "y": 112.00000000000006
+        "x": 426.4811461600705,
+        "y": 201.9948817917504
       },
       "data": {
         "title": "角色块",
@@ -22,8 +22,8 @@
       "id": "node_role_alice",
       "type": "roleNode",
       "position": {
-        "x": 337.9999999999999,
-        "y": 364.0000000000001
+        "x": 429.1644525714879,
+        "y": 451.99926046098915
       },
       "data": {
         "title": "角色块",
@@ -31,7 +31,7 @@
       },
       "measured": {
         "width": 112,
-        "height": 84
+        "height": 80
       },
       "selected": false,
       "dragging": false
@@ -40,8 +40,8 @@
       "id": "node_content_current",
       "type": "contentNode",
       "position": {
-        "x": 550,
-        "y": 250
+        "x": 565.6037677501636,
+        "y": 184.53880184637922
       },
       "data": {
         "title": "内容块",
@@ -52,32 +52,34 @@
         "width": 224,
         "height": 126
       },
-      "selected": false
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_content_plan",
       "type": "contentNode",
       "position": {
-        "x": 550,
-        "y": 500
+        "x": 565.6037677501636,
+        "y": 409.9782629798254
       },
       "data": {
         "title": "内容块",
         "status": "历史",
-        "content": "我的特点？哈哈，除了爱吃披萨之外，我还喜欢用轻松幽默的方式聊天，偶尔会冒出一些奇奇怪怪的比喻～ 需要帮忙的时候，我随时都在哦！ 😄🍕"
+        "content": "我的特点？哈哈，除了爱吃披萨🍕，我还喜欢分享有趣的知识、讲冷笑话，偶尔帮人出主意～ 需要披萨推荐、闲聊或者脑洞话题的话，随时找我！ 😄"
       },
       "measured": {
         "width": 224,
         "height": 162
       },
-      "selected": false
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_debug_start",
       "type": "debugNode",
       "position": {
-        "x": 880,
-        "y": 50
+        "x": 772.5047423177801,
+        "y": 51.79831534985956
       },
       "data": {
         "title": "调试标记\n开始"
@@ -85,14 +87,16 @@
       "measured": {
         "width": 99,
         "height": 67
-      }
+      },
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_btn_start",
       "type": "buttonNode",
       "position": {
-        "x": 862,
-        "y": 327
+        "x": 866.9704138239127,
+        "y": 221.47387914166222
       },
       "data": {
         "title": "开始聊天按钮"
@@ -101,15 +105,15 @@
         "width": 139,
         "height": 51
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
       "id": "node_debug_end",
       "type": "debugNode",
       "position": {
-        "x": 880,
-        "y": 600
+        "x": 777.1975457720994,
+        "y": 638.9528904609676
       },
       "data": {
         "title": "调试标记\n结束"
@@ -117,14 +121,16 @@
       "measured": {
         "width": 99,
         "height": 67
-      }
+      },
+      "selected": false,
+      "dragging": false
     },
     {
       "id": "node_prompt_alice",
       "type": "rolePromptNode",
       "position": {
-        "x": 71.81949943588313,
-        "y": 195.65766807622484
+        "x": 213.13336595132586,
+        "y": 433.86186332546515
       },
       "data": {
         "title": "角色提示词",
@@ -133,6 +139,24 @@
       "measured": {
         "width": 192,
         "height": 120
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1775218196566_eu2d2h",
+      "type": "modelStatusNode",
+      "position": {
+        "x": 817.1916251719919,
+        "y": 416.8380713350407
+      },
+      "data": {
+        "title": "模型调用情况",
+        "content": "【调用成功】\n供应商: deepseek\n模型: deepseek-chat\n消耗Token: 82"
+      },
+      "measured": {
+        "width": 256,
+        "height": 151
       },
       "selected": false,
       "dragging": false
@@ -147,7 +171,8 @@
       "type": "editableEdge",
       "data": {
         "label": "写入提示词"
-      }
+      },
+      "selected": false
     },
     {
       "id": "e_user_to_current",
@@ -157,7 +182,8 @@
       "type": "editableEdge",
       "data": {
         "label": "处理此对话"
-      }
+      },
+      "selected": false
     },
     {
       "id": "e_alice_to_plan",
@@ -167,7 +193,8 @@
       "type": "editableEdge",
       "data": {
         "label": "处理此对话"
-      }
+      },
+      "selected": false
     },
     {
       "id": "e_debugStart_to_current",
@@ -177,7 +204,8 @@
       "type": "editableEdge",
       "data": {
         "label": "此处视为开始"
-      }
+      },
+      "selected": false
     },
     {
       "id": "e_current_to_plan",
@@ -187,7 +215,8 @@
       "type": "editableEdge",
       "data": {
         "label": "连接上下文"
-      }
+      },
+      "selected": false
     },
     {
       "id": "e_current_to_btnStart",
@@ -197,7 +226,8 @@
       "type": "editableEdge",
       "data": {
         "label": "开始聊天"
-      }
+      },
+      "selected": false
     },
     {
       "id": "e_plan_to_debugEnd",
@@ -207,6 +237,45 @@
       "type": "editableEdge",
       "data": {
         "label": "此处视为结束"
+      },
+      "selected": false
+    },
+    {
+      "id": "edge_1775218196568_g5cw4o",
+      "source": "node_content_plan",
+      "target": "node_1775218196566_eu2d2h",
+      "type": "editableEdge",
+      "animated": true,
+      "data": {
+        "label": "调用情况"
+      },
+      "style": {
+        "strokeDasharray": "5, 5",
+        "stroke": "#555",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#555"
+      }
+    },
+    {
+      "id": "edge_1775218196568_ptypia",
+      "source": "node_content_plan",
+      "target": "node_1775218196566_51yy1u",
+      "type": "editableEdge",
+      "animated": true,
+      "data": {
+        "label": "调用情况"
+      },
+      "style": {
+        "strokeDasharray": "5, 5",
+        "stroke": "#555",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#555"
       }
     }
   ]

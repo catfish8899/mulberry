@@ -30,9 +30,6 @@ export const pushPersistentConfig = async (pathString) => {
   }
 };
 
-/**
- * 【新增】[拉取动作] 从后端 JSON 按规拉取历史被保存的画布数据 (Nodes, Edges)
- */
 export const fetchCanvasData = async () => {
   try {
     const response = await fetch(`${API_BASE}/canvas/data`);
@@ -43,9 +40,6 @@ export const fetchCanvasData = async () => {
   }
 };
 
-/**
- * 【新增】[推送动作] 将当前的 Nodes 和 Edges 强制物理投递到后端，覆写指定的硬盘 .json 文件
- */
 export const pushCanvasData = async (nodes, edges) => {
   try {
     await fetch(`${API_BASE}/canvas/data`, {
@@ -58,7 +52,6 @@ export const pushCanvasData = async (nodes, edges) => {
     throw err;
   }
 };
-
 
 // ====== 以下为原架构包含的画布状态机与流式核心引擎 ======
 
@@ -166,17 +159,94 @@ export const useFlowEngine = ({ getNodes, getEdges, setNodes, setEdges, globalSe
               return node;
             }));
           } 
-          else if (eventType === 'error') {
-            const { msg } = JSON.parse(eventData);
-            alert("图执行引擎被拦截: \n\n" + msg);
-          }
-          else if (eventType === 'done') {
-            setNodes((nds) => nds.map((node) => {
-              if (node.id === currentActiveStreamNodeId.current) {
-                return { ...node, data: { ...node.data, status: "历史" } };
+          // 整合流闭合与异常处理，注入节点自动拓扑挂载机制
+          else if (eventType === 'error' || eventType === 'done') {
+            const isError = eventType === 'error';
+            const payload = eventData ? JSON.parse(eventData) : {};
+            
+            if (isError) {
+              alert("图执行引擎被拦截: \n\n" + (payload.msg || "未知错误"));
+            }
+
+            const currentId = currentActiveStreamNodeId.current;
+            
+            // 构建将要写入记录版的规范化多行文本
+            let statusText = "";
+            if (isError) {
+              statusText = `【调用异常】\n供应商: ${payload.provider || "未知"}\n模型: ${payload.model || "未知"}\n错误: ${payload.msg || "未知"}`;
+            } else {
+              statusText = `【调用成功】\n供应商: ${payload.provider || "未知"}\n模型: ${payload.model || "未知"}\n消耗Token: ${payload.tokens || 0}`;
+            }
+
+            // 获取此刻所有边信息以甄别是否存在旧的连线
+            const currentEdges = getEdges();
+
+            setNodes((nds) => {
+              // 1. 将当前回答块的状态设为“历史”
+              const updatedNodes = nds.map((node) => {
+                if (node.id === currentId) {
+                  return { ...node, data: { ...node.data, status: "历史" } };
+                }
+                return node;
+              });
+
+              if (!currentId) return updatedNodes;
+
+              // 2. 探查是否已为当前节点生成过模型信息节点
+              const existingEdge = currentEdges.find(e => 
+                e.source === currentId && 
+                nds.find(n => n.id === e.target)?.type === 'modelStatusNode'
+              );
+
+              if (existingEdge) {
+                // 若存在：仅向目标节点注入最新执行数据
+                return updatedNodes.map(node => {
+                  if (node.id === existingEdge.target) {
+                    return { ...node, data: { ...node.data, content: statusText } };
+                  }
+                  return node;
+                });
+              } else {
+                // 若不存在：计算偏移生成新生代节点
+                const sourceNode = nds.find(n => n.id === currentId);
+                if (sourceNode) {
+                  const newNodeId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                  const newNode = {
+                    id: newNodeId,
+                    type: 'modelStatusNode',
+                    parentId: sourceNode.parentId, // 穿透继承父集合属性
+                    position: { 
+                      x: sourceNode.position.x + (sourceNode.measured?.width || 250) + 60, 
+                      y: sourceNode.position.y 
+                    },
+                    data: { title: "模型调用情况", content: statusText }
+                  };
+                  
+                  // 在下一宏任务生成连线以防止状态闭包冲突
+                  setTimeout(() => {
+                    setEdges((eds) => {
+                      if (eds.find(e => e.source === currentId && e.target === newNodeId)) return eds;
+                      return [
+                        ...eds,
+                        {
+                          id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+                          source: currentId,
+                          target: newNodeId,
+                          type: 'editableEdge',
+                          animated: true,
+                          data: { label: "调用情况" },
+                          style: { strokeDasharray: '5, 5', stroke: '#555', strokeWidth: 2 },
+                          markerEnd: { type: 'arrowclosed', color: '#555' }
+                        }
+                      ];
+                    });
+                  }, 0);
+
+                  return [...updatedNodes, newNode];
+                }
               }
-              return node;
-            }));
+              return updatedNodes;
+            });
           }
         }
       }
@@ -185,6 +255,7 @@ export const useFlowEngine = ({ getNodes, getEdges, setNodes, setEdges, globalSe
     } finally {
       isStreamingRef.current = false;
       currentActiveStreamNodeId.current = null;
+      // 300ms 后的兜底状态落盘会一并囊括生成的节点与连线
       setTimeout(() => pushStateToBackend(), 300);
     }
   };

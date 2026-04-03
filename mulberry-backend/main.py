@@ -26,7 +26,7 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 1. 角色配置文件地址存储库
 CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.json")
-# 2. 【新增】画布独立拓扑图数据存储库
+# 2. 画布独立拓扑图数据存储库
 CANVAS_DATA_FILE_PATH = os.path.join(BASE_DIR, "canvas_data.json")
 
 # ====== 历史记录栈 (撤销/重做状态机) ======
@@ -65,7 +65,7 @@ async def redo_state():
     return {"state": history_stack[current_index] if history_stack else None, "status": get_current_status()}
 
 
-# ====== 新增：图拓扑数据 (画布) 持久化读写接口 ======
+# ====== 图拓扑数据 (画布) 持久化读写接口 ======
 @app.get("/api/canvas/data")
 async def get_canvas_data():
     """只读接口：供前端在刷新或冷启动时调取上一次被主动保存的画布内容"""
@@ -99,7 +99,7 @@ async def get_config():
                 data = json.load(f)
                 return {
                     "path": data.get("excel_path", ""),
-                    "upper_opacity": data.get("upper_opacity", 70),  # 注入默认读取安全底座
+                    "upper_opacity": data.get("upper_opacity", 70), 
                     "node_opacity": data.get("node_opacity", 85)
                 }
         except Exception as e:
@@ -108,7 +108,6 @@ async def get_config():
 
 @app.post("/api/settings/config")
 async def save_config(payload: Dict[str, Any]):
-    # 为防止覆盖其他同级配置，改为了读写分离追加模式
     data = {}
     if os.path.exists(CONFIG_FILE_PATH):
         try:
@@ -154,6 +153,9 @@ def find_node(nodes, node_id):
     return next((n for n in nodes if n['id'] == node_id), None)
 
 async def _chat_generator(payload: Dict[str, Any]):
+    # 提前初始化调用元数据，确保发生异常时也有默认值垫底
+    provider, model_name, tokens_used = "未知", "未知", 0
+    
     try:
         nodes = payload.get("nodes", [])
         edges = payload.get("edges", [])
@@ -179,7 +181,6 @@ async def _chat_generator(payload: Dict[str, Any]):
         if current_content_node.get('data', {}).get('status') != '当前':
             raise ValueError("防呆拦截：当前上下文焦点状态并非处于『当前』")
 
-        plan_edge = next((e for e in edges if e.get('source') == current_content_node['id'] and 'connect' not in e.get('type','')), None)
         plan_edge = next((e for e in edges if e['source'] == current_content_node['id'] and find_node(nodes, e['target'])['type'] == 'contentNode'), None)
         if not plan_edge: raise ValueError("图有断层，找不到后续的计划接替节点")
         next_content_node = find_node(nodes, plan_edge['target'])
@@ -200,7 +201,7 @@ async def _chat_generator(payload: Dict[str, Any]):
         }
         yield f"event: meta\ndata: {json.dumps(meta_event)}\n\n"
 
-        api_key, model_name, provider = None, None, None
+        api_key = None
         model_found_flag = False
         
         if settings_path and os.path.exists(settings_path):
@@ -209,9 +210,9 @@ async def _chat_generator(payload: Dict[str, Any]):
             sheet = wb.active
             for row in sheet.iter_rows(min_row=2, values_only=True):
                 if str(row[0]).strip() == agent_name and agent_name != "用户":
-                    provider = str(row[1]).strip()
-                    model_name = str(row[2]).strip()
-                    env_name = str(row[4]).strip()
+                    provider = str(row[1]).strip() if row[1] else "未知"
+                    model_name = str(row[2]).strip() if row[2] else "未知"
+                    env_name = str(row[4]).strip() if row[4] else ""
                     api_key = os.getenv(env_name)
                     if api_key: model_found_flag = True
                     break
@@ -227,28 +228,38 @@ async def _chat_generator(payload: Dict[str, Any]):
                 async with client.stream(
                     "POST", base_url,
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                    json={"model": model_name, "messages": messages, "stream": True},
+                    json={"model": model_name, "messages": messages, "stream": True, "stream_options": {"include_usage": True}},
                     timeout=30.0
                 ) as response:
                     async for chunk in response.aiter_lines():
                         if chunk.startswith("data: ") and chunk != "data: [DONE]":
                             try:
                                 data_dict = json.loads(chunk[6:])
-                                delta = data_dict["choices"][0]["delta"].get("content", "")
-                                if delta:
-                                    yield f"event: text\ndata: {json.dumps({'text': delta})}\n\n"
+                                choices = data_dict.get("choices", [])
+                                if choices and len(choices) > 0:
+                                    delta = choices[0].get("delta", {}).get("content", "")
+                                    if delta:
+                                        yield f"event: text\ndata: {json.dumps({'text': delta})}\n\n"
+                                
+                                # 捕获最后带有 usage 指标的数据包 (支持 DeepSeek / OpenAI 的 include_usage 特性)
+                                if "usage" in data_dict and data_dict["usage"]:
+                                    tokens_used = data_dict["usage"].get("total_tokens", 0)
                             except Exception: pass
         else:
-            fallback_text = f"你好，这里是本地演练流。我是角色『{agent_name}』。\n您的表格配置 { '成功命中角色' if provider else '没有命中相关角色' }，但由于系统未找到此 API 请求密钥变量，已退回本地演示模式。\n\n看到了吗？这也是流式输出的一环！顺便，你的话“{user_input_text.strip()[:10]}...”收到了。"
+            fallback_text = f"你好，这里是本地演练流。我是角色『{agent_name}』。\n您的表格配置 { '成功命中角色' if provider != '未知' else '没有命中相关角色' }，但由于系统未找到此 API 请求密钥变量，已退回本地演示模式。\n\n看到了吗？这也是流式输出的一环！顺便，你的话“{user_input_text.strip()[:10]}...”收到了。"
             import asyncio
             for char in fallback_text:
                 yield f"event: text\ndata: {json.dumps({'text': char})}\n\n"
                 await asyncio.sleep(0.05)
+            # 假装消耗了 Token
+            tokens_used = len(fallback_text) + len(user_input_text)
 
-        yield "event: done\ndata: {}\n\n"
+        # 回传全部执行日志与消费信息给前端
+        yield f"event: done\ndata: {json.dumps({'provider': provider, 'model': model_name, 'tokens': tokens_used})}\n\n"
 
     except Exception as e:
-        yield f"event: error\ndata: {json.dumps({'msg': str(e)})}\n\n"
+        # 当遇到断网、无环境等崩溃性异常时触发，连带模型元数据返回
+        yield f"event: error\ndata: {json.dumps({'msg': str(e), 'provider': provider, 'model': model_name})}\n\n"
 
 @app.post("/api/chat/run")
 async def run_chat(request: Request):
